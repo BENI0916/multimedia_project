@@ -1,11 +1,11 @@
 # multimedia_project
 extra library:(https://github.com/nothings/stb/tree/master)
 
-compile `gcc -o phantom_tank.exe phantom_tank.c`
+compile: `gcc -o phantom_tank.exe phantom_tank.c`
 
-execute `./phantom_tank img1.png img2.png output.png`
+execute: `./phantom_tank img1.png img2.png output.png`
 
-file structure
+file structure:
 ```
 --multimedia_project
   |
