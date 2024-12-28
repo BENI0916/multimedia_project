@@ -8,24 +8,40 @@
 #include "stb-master/stb_image_resize2.h"
 
 unsigned char* convert_to_grayscale(const char* input_path, int *w, int *h, int *c);
-unsigned char* resize(unsigned char* old_img, int width, int height, int channel);
+int resize(unsigned char** img1, int* width1, int* height1, unsigned char** img2, int* width2, int* height2);
 void change_gray(unsigned char* grayscale, int width, int height, int op);
+int needResize(int width1, int height1, int width2, int height2);
 
 int main(int argc, char* argv[]) 
 {
     if (argc < 4) 
     {
         printf("Usage: %s <input_image> <output_image>\n", argv[0]);
-        return 1;
+        return -1;
+    }
+    char* input_1_path = argv[1];
+    char* input_2_path = argv[2];
+    char* output = argv[3];
+    int width1, width2, height1, height2, channels1, channels2;
+    int width, height;
+
+    //load img and turn grayscale
+    unsigned char* grayscale_1 = convert_to_grayscale(input_1_path, &width1, &height1, &channels1);
+    unsigned char* grayscale_2 = convert_to_grayscale(input_2_path, &width2, &height2, &channels2);
+    if (grayscale_1==NULL||grayscale_2==NULL) {
+        return -1;
     }
 
-    const char* input_1_path = argv[1];
-    const char* input_2_path = argv[2];
-    const char* output = argv[3];
-    int width, height, channels;
+    //determine if need to resize
+    if (needResize(width1, height1, width2, height2)) {
+        if (resize(&grayscale_1, &width1, &height1, &grayscale_2, &width2, &height2)==-1) {
+            return -1;
+        }
+    }
 
-    unsigned char* grayscale_1 = convert_to_grayscale(input_1_path, &width, &height, &channels);
-    unsigned char* grayscale_2 = convert_to_grayscale(input_2_path, &width, &height, &channels);
+    // w1 == w2 and h1 == h2
+    width = width1;
+    height = height1;
 
     change_gray(grayscale_1, width, height, 128);
     change_gray(grayscale_2, width, height, 0);
@@ -110,19 +126,42 @@ unsigned char* convert_to_grayscale(const char* input_path, int *w, int *h, int 
     return new_img;
 }
 
-// unsigned char* resize(unsigned char* old_img, int old_width, int old_height, int channel, int new_)
-// {
-//     unsigned char *new_img = (unsigned char*)malloc(width * height);
+// to check if two img same size
+int needResize(int width1, int height1, int width2, int height2) {
+    if (width1==width2&&height1==height2) {
+        return 0;
+    }
+    else {
+        return 1;
+    }
+}
 
-//     int res = 
-//     //STBIRDEF unsigned char * stbir_resize_uint8_srgb( const unsigned char *input_pixels , int input_w , int input_h, int input_stride_in_bytes,
-//     //                                                    unsigned char *output_pixels, int output_w, int output_h, int output_stride_in_bytes,
-//     //                                                    stbir_pixel_layout pixel_type );
+// use to resize
+int resize(unsigned char** img1, int* width1, int* height1, unsigned char** img2, int* width2, int* height2) {
+    // use min(w1, w2) to determine new size
+    int w = *width1 <= *width2 ? *width1 : *width2;
+    int h = *width1 <= *width2 ? *height1 : *height2;
+    unsigned char* img = *width1 > *width2 ? *img1 : *img2;
 
-// }
+    // resize
+    unsigned char* tmp = stbir_resize_uint8_linear(img, *width1 > *width2 ? *width1 : *width2, *width1 > *width2 ? *height1 : *height2, 0, NULL, w, h, 0, 1);
+    
+    // redirection
+    if (*width1 > *width2) {
+        free(*img1);
+        *img1 = tmp;
+        *width1 = *width2;
+        *height1 = *height2;
+    }
+    else {
+        free(*img2);
+        *img2 = tmp;
+    }
 
-void change_gray(unsigned char* grayscale, int width, int height, int op)
-{
+    return 1;
+}
+
+void change_gray(unsigned char* grayscale, int width, int height, int op) {
     for(int i = 0; i < width * height; i++)
     {
         grayscale[i] = (unsigned char)((float)grayscale[i] / 255. * 127. + op);
